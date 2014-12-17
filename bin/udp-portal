@@ -18,9 +18,7 @@ var uri2 = url.parse(argv[4]);
 
 switch(command) {
 case 'server':
-    var server = Server(uri1);
-    server.listen(uri2.port, function() {
-    });
+    var server = Server(uri1, uri2);
     break;
 case 'client':
     var client = Client(uri1, uri2);

@@ -2,44 +2,35 @@ var net = require('net');
 var dgram = require('dgram');
 var url = require('url');
 
-var Server = function(uri) {
-    if (!(this instanceof Server)) {
-        return new Server(uri);
-    }
+module.exports = function(listenUri, tunnelUri) {
+  var udp = dgram.createSocket('udp4');
+  udp.bind(listenUri.port, function(err) {
+    console.log("Server bound to " + url.format(listenUri));
+  });
 
-    var self = this;
-    self.uri = url.parse(uri);
+  var client = net.connect(tunnelUri.port, tunnelUri.hostname);
 
-    self.server = net.createServer();
+  client.on('connect', function() {
+    console.log('Connected to destination ' + url.format(tunnelUri));
+  });
 
-    self.udp = dgram.createSocket('udp4');
-    self.udp.bind(self.uri.port, function(err) {
-        self.udp.addMembership(self.uri.hostname);
-    });
+  client.on('close', function() {
+    console.error('Connection to destination ' + url.format(tunnelUri) + ' lost, reconnecting');
+    setTimeout(function() {
+      client.connect(tunnelUri.port, tunnelUri.hostname);
+    }, 1000);
+  })
+
+  client.on('error', function(err) {
+    console.log(err);
+  });
+
+  var handler = function handler(msg) {
+    var buff = Buffer(2);
+    buff.writeUInt16BE(msg.length, 0);
+    client.write(buff);
+    client.write(msg);
+  };
+
+  udp.on('message', handler);
 };
-
-Server.prototype.listen = function(port, cb) {
-    var self = this;
-    self.server.listen(port, cb);
-
-    self.server.on('connection', function(socket) {
-        var handler = function handler(msg) {
-            var buff = Buffer(2);
-            buff.writeUInt16BE(msg.length, 0);
-            socket.write(buff);
-            socket.write(msg);
-        };
-
-        self.udp.on('message', handler);
-        socket.once('close', function() {
-            self.udp.removeListener('message', handler);
-        });
-    });
-};
-
-Server.prototype.address = function() {
-    var self = this;
-    return self.server.address();
-};
-
-module.exports = Server;
