@@ -5,7 +5,6 @@ var url = require('url');
 
 module.exports = function(tunnelUri, destinationUri) {
   var ee = new EventEmitter();
-
   var server = net.createServer();
 
   tunnelUri = url.parse(tunnelUri);
@@ -17,9 +16,19 @@ module.exports = function(tunnelUri, destinationUri) {
   var handler = function(socket) {
     console.log("Client connected: " + socket.remoteAddress);
 
+    var messageCount = 0;
     var current_buff = undefined;
     var current_size = 0;
     var current_offset = 0;
+
+    var debug = setInterval(function() {
+      console.log("Client " + socket.remoteAddress + " sent " + messageCount + " messages.");
+      messageCount = 0;
+    }, 10 * 1000);
+
+    socket.on('close', function() {
+      clearInterval(debug);
+    });
 
     socket.on('data', function(chunk) {
 
@@ -49,6 +58,7 @@ module.exports = function(tunnelUri, destinationUri) {
           continue;
         }
 
+        messageCount += 1;
         ee.emit('message', current_buff);
 
         current_buff = undefined;
