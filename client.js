@@ -76,16 +76,6 @@ module.exports = function(tunnelUri, destinationUri) {
 
   var udp = dgram.createSocket('udp4');
 
-  udp.bind(destinationPort, function(err) {
-    if (err) {
-      return ee.emit('error', err);
-    }
-
-    console.log("Connected to tunnel " + url.format(destinationUri));
-
-    //udp.addMembership(destinationIp);
-  });
-
   var out_queue = [];
 
   ee.on('message', function(buff) {
